@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Video Compressor</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Video Compressor</h1>
+    <div class="upload-section">
+      <label for="file-input" class="upload-label">Upload Video</label>
+      <input type="file" id="file-input" accept="video/*">
+    </div>
+    <div class="video-info" style="display: none;"></div>
+    <div class="algorithm-section">
+      <label for="algorithm-select">Choose Compression Algorithm:</label>
+      <select id="algorithm-select">
+        <option value="huffman">Huffman</option>
+        <!-- Jika ingin menambahkan pilihan algoritma lain -->
+        <!-- <option value="arithmetic">Arithmetic</option> -->
+      </select>
+    </div>
+    <button id="compress-button" disabled>Compress Video</button>
+    <div class="progress-section" id="progress-section" style="display: none;">
+      <p>Compressing...</p>
+      <div class="progress-bar">
+        <div class="progress" id="progress"></div>
+      </div>
+    </div>
+    <div class="download-section" id="download-section" style="display: none;">
+      <button id="download-button">Download Compressed Video</button>
+    </div>
+    <video id="video" controls style="display: none;"></video>
+    <canvas id="canvas" style="display: none;"></canvas>
+  </div>
+  <script src="compress.js"></script>
+</body>
+</html>
