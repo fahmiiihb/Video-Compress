@@ -63,6 +63,83 @@ function huffmanDecode(encodedData, huffmanTree) {
   return new Uint8Array(decodedData);
 }
 
+// Fungsi untuk menghitung total frekuensi untuk Arithmetic Coding
+function getTotalFrequency(frequencyTable) {
+  return Object.values(frequencyTable).reduce((a, b) => a + b, 0);
+}
+
+// Class ArithmeticCoding untuk implementasi Arithmetic Coding
+class ArithmeticCoding {
+  constructor(frequencyTable) {
+    this.probabilityTable = this.getProbabilityTable(frequencyTable);
+  }
+
+  getProbabilityTable(frequencyTable) {
+    const totalFrequency = getTotalFrequency(frequencyTable);
+
+    const probabilityTable = {};
+    let cumulativeProbability = 0;
+    for (const key in frequencyTable) {
+      const probability = frequencyTable[key] / totalFrequency;
+      probabilityTable[key] = {
+        low: cumulativeProbability,
+        high: cumulativeProbability + probability,
+      };
+      cumulativeProbability += probability;
+    }
+
+    return probabilityTable;
+  }
+
+  encode(videoData, probabilityTable) {
+    const encoder = [];
+    let low = 0.0;
+    let high = 1.0;
+
+    for (let i = 0; i < videoData.length; i++) {
+      const symbol = videoData[i];
+      const { low: rangeLow, high: rangeHigh } = probabilityTable[symbol];
+      const range = high - low;
+
+      high = low + range * rangeHigh;
+      low = low + range * rangeLow;
+
+      encoder.push([low, high]);
+    }
+
+    return encoder;
+  }
+
+  decode(encodedData, probabilityTable, videoDataLength) {
+    const decodedData = [];
+    let low = 0.0;
+    let high = 1.0;
+
+    for (let i = 0; i < videoDataLength; i++) {
+      const encodedValue = encodedData[i];
+      let symbol = null;
+
+      for (const key in probabilityTable) {
+        const { low: rangeLow, high: rangeHigh } = probabilityTable[key];
+        if (encodedValue >= rangeLow && encodedValue < rangeHigh) {
+          symbol = key;
+          break;
+        }
+      }
+
+      if (symbol !== null) {
+        decodedData.push(symbol);
+        const { low: rangeLow, high: rangeHigh } = probabilityTable[symbol];
+        const range = high - low;
+        low = low + range * rangeLow;
+        high = low + range * rangeHigh;
+      }
+    }
+
+    return decodedData;
+  }
+}
+
 // Mengambil elemen-elemen dari DOM
 const fileInput = document.getElementById('file-input');
 const compressButton = document.getElementById('compress-button');
@@ -70,6 +147,8 @@ const downloadButton = document.getElementById('download-button');
 const algorithmSelect = document.getElementById('algorithm-select');
 const video = document.getElementById('video');
 const videoInfoDiv = document.querySelector('.video-info');
+const progressSection = document.getElementById('progress-section');
+const progressBar = document.getElementById('progress');
 
 let videoData;
 let compressedVideo;
@@ -115,6 +194,7 @@ function formatTime(seconds) {
   return `${hours}:${minutes}:${secs}`;
 }
 
+
 // Fungsi untuk memformat ukuran file dalam byte, KB, MB, dll.
 function formatBytes(bytes, decimals = 2) {
   if (bytes === 0) return '0 Bytes';
@@ -126,7 +206,7 @@ function formatBytes(bytes, decimals = 2) {
 }
 
 // Event listener untuk tombol kompresi
-compressButton.addEventListener('click', () => {
+compressButton.addEventListener('click', async () => {
   const algorithm = algorithmSelect.value;
   if (algorithm === 'huffman') {
     const frequency = calculateFrequency(videoData);
@@ -134,11 +214,43 @@ compressButton.addEventListener('click', () => {
     const huffmanCodes = buildHuffmanCodes(huffmanTree);
     const encodedData = huffmanEncode(Array.from(videoData), huffmanCodes);
     compressedVideo = huffmanDecode(encodedData, huffmanTree);
-    showDownloadLink();
-  } else {
-    // Arithmetic compression will be implemented here
-    console.log("Arithmetic compression is not yet implemented.");
+
+    // Menampilkan progress section
+    progressSection.style.display = 'block';
+    progressBar.style.width = '0%';
+
+    // Menunggu sedikit sebelum menampilkan progres
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    // Mengupdate progres dan menampilkan link download setelah kompresi selesai
+    progressBar.style.width = '100%';
+    setTimeout(() => {
+      showDownloadLink();
+      progressSection.style.display = 'none'; // Sembunyikan progress section setelah selesai
+    }, 500);
+  } else if (algorithm === 'arithmetic') {
+    const frequencyTable = calculateFrequency(videoData);
+    const ac = new ArithmeticCoding(frequencyTable);
+    const encodedData = ac.encode(videoData, ac.probabilityTable);
+    compressedVideo = ac.decode(encodedData, ac.probabilityTable, videoData.length);
+
+    // Menampilkan progress section
+    progressSection.style.display = 'block';
+    progressBar.style.width = '0%';
+
+    // Menunggu sedikit sebelum menampilkan progres
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    // Mengupdate progres dan menampilkan link download setelah kompresi selesai
+    progressBar.style.width = '100%';
+    setTimeout(() => {
+      showDownloadLink();
+      progressSection.style.display = 'none'; // Sembunyikan progress section setelah selesai
+    }, 500);
   }
+
+  // Pilihan algoritma lain dapat ditambahkan di sini
+
 });
 
 // Event listener untuk tombol download
@@ -155,3 +267,4 @@ downloadButton.addEventListener('click', () => {
 function showDownloadLink() {
   document.getElementById('download-section').style.display = 'block';
 }
+
